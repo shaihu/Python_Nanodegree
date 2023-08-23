@@ -26,6 +26,7 @@ import time
 import torch
 from torch import nn, optim
 from torchvision import datasets, transforms, models
+from workspace_utils import active_session
 #from collections import OrderedDict
 ```
 
@@ -119,37 +120,163 @@ classifier = nn.Sequential(nn.Linear(25088, 1024),
                                  nn.LogSoftmax(dim=1))
     
 model.classifier = classifier
-print("Debug Msg1 - classifier assigned")
 criterion = nn.NLLLoss()
 
 optimizer = optim.Adam(model.classifier.parameters(), lr=0.001)
-print("Debug Msg2 - optimizer")
 epochs = 3
 print(f"Number of Epochs is: {epochs}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device is: {device}")
+start = time.ctime()
 
 model.to(device)
+with active_session():
+    for e in range(epochs):
+        print(f"Inside for loop {e+1} at time {time.ctime()}")
+        running_loss = 0
+        #i = 1
+        for images, labels in trainloader:
+            #print(f"Entering internal loop {i} Time is {time.ctime()}")
+            images, labels = images.to(device), labels.to(device)
+            log_ps = model(images)
+            loss = criterion(log_ps, labels)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-for e in range(epochs):
-    print(f"Inside for loop {e+1}")
-    running_loss = 0
-    for images, labels in trainloader:
-        images, labels = images.to(device), labels.to(device)
-        log_ps = model(images)
-        loss = criterion(log_ps, labels)
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        running_loss += loss.item()
-    else:
-        print(f"Training loss: {running_loss/len(trainloader)}")
+            running_loss += loss.item()
+            #i+=1
+        else:
+            print(f"Training loss: {running_loss/len(trainloader)}")
 ```
 
     Downloading: "https://download.pytorch.org/models/vgg11-bbd30ac9.pth" to /root/.torch/models/vgg11-bbd30ac9.pth
-    100%|██████████| 531456000/531456000 [00:08<00:00, 59863076.25it/s]
+    100%|██████████| 531456000/531456000 [00:07<00:00, 73176583.18it/s]
+
+
+    Number of Epochs is: 3
+    Device is: cpu
+    Inside for loop 1 at time Sat Aug  5 00:40:57 2023
+
+
+
+    ---------------------------------------------------------------------------
+
+    InvalidHeader                             Traceback (most recent call last)
+
+    <ipython-input-5-d08da2b026f1> in <module>()
+         31             #print(f"Entering internal loop {i} Time is {time.ctime()}")
+         32             images, labels = images.to(device), labels.to(device)
+    ---> 33             log_ps = model(images)
+         34             loss = criterion(log_ps, labels)
+         35             optimizer.zero_grad()
+
+
+    /opt/conda/lib/python3.6/site-packages/torch/nn/modules/module.py in __call__(self, *input, **kwargs)
+        489             result = self._slow_forward(*input, **kwargs)
+        490         else:
+    --> 491             result = self.forward(*input, **kwargs)
+        492         for hook in self._forward_hooks.values():
+        493             hook_result = hook(self, input, result)
+
+
+    /opt/conda/lib/python3.6/site-packages/torchvision-0.2.1-py3.6.egg/torchvision/models/vgg.py in forward(self, x)
+         40 
+         41     def forward(self, x):
+    ---> 42         x = self.features(x)
+         43         x = x.view(x.size(0), -1)
+         44         x = self.classifier(x)
+
+
+    /opt/conda/lib/python3.6/site-packages/torch/nn/modules/module.py in __call__(self, *input, **kwargs)
+        489             result = self._slow_forward(*input, **kwargs)
+        490         else:
+    --> 491             result = self.forward(*input, **kwargs)
+        492         for hook in self._forward_hooks.values():
+        493             hook_result = hook(self, input, result)
+
+
+    /opt/conda/lib/python3.6/site-packages/torch/nn/modules/container.py in forward(self, input)
+         89     def forward(self, input):
+         90         for module in self._modules.values():
+    ---> 91             input = module(input)
+         92         return input
+         93 
+
+
+    /opt/conda/lib/python3.6/site-packages/torch/nn/modules/module.py in __call__(self, *input, **kwargs)
+        489             result = self._slow_forward(*input, **kwargs)
+        490         else:
+    --> 491             result = self.forward(*input, **kwargs)
+        492         for hook in self._forward_hooks.values():
+        493             hook_result = hook(self, input, result)
+
+
+    /opt/conda/lib/python3.6/site-packages/torch/nn/modules/conv.py in forward(self, input)
+        299     def forward(self, input):
+        300         return F.conv2d(input, self.weight, self.bias, self.stride,
+    --> 301                         self.padding, self.dilation, self.groups)
+        302 
+        303 
+
+
+    /workspace/home/aipnd-project/workspace_utils.py in _handler(signum, frame)
+         15 def _request_handler(headers):
+         16     def _handler(signum, frame):
+    ---> 17         requests.request("POST", KEEPALIVE_URL, headers=headers)
+         18     return _handler
+         19 
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/api.py in request(method, url, **kwargs)
+         56     # cases, and look like a memory leak in others.
+         57     with sessions.Session() as session:
+    ---> 58         return session.request(method=method, url=url, **kwargs)
+         59 
+         60 
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/sessions.py in request(self, method, url, params, data, headers, cookies, files, auth, timeout, allow_redirects, proxies, hooks, stream, verify, cert, json)
+        492             hooks=hooks,
+        493         )
+    --> 494         prep = self.prepare_request(req)
+        495 
+        496         proxies = proxies or {}
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/sessions.py in prepare_request(self, request)
+        435             auth=merge_setting(auth, self.auth),
+        436             cookies=merged_cookies,
+    --> 437             hooks=merge_hooks(request.hooks, self.hooks),
+        438         )
+        439         return p
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/models.py in prepare(self, method, url, headers, files, data, params, auth, cookies, hooks, json)
+        304         self.prepare_method(method)
+        305         self.prepare_url(url, params)
+    --> 306         self.prepare_headers(headers)
+        307         self.prepare_cookies(cookies)
+        308         self.prepare_body(data, files, json)
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/models.py in prepare_headers(self, headers)
+        438             for header in headers.items():
+        439                 # Raise exception on invalid header value.
+    --> 440                 check_header_validity(header)
+        441                 name, value = header
+        442                 self.headers[to_native_string(name)] = value
+
+
+    /opt/conda/lib/python3.6/site-packages/requests/utils.py in check_header_validity(header)
+        867     try:
+        868         if not pat.match(value):
+    --> 869             raise InvalidHeader("Invalid return character or leading space in header: %s" % name)
+        870     except TypeError:
+        871         raise InvalidHeader("Value for header {%s: %s} must be of type str or "
+
+
+    InvalidHeader: Invalid return character or leading space in header: Authorization
 
 
 ## Testing your network
